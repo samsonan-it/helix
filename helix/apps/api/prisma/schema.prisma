@@ -1,0 +1,453 @@
+// helix/apps/api/prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  active
+  departed
+  retention_only
+}
+
+model User {
+  id         String     @id @default(cuid())
+  email      String     @unique
+  name       String
+  createdAt  DateTime   @default(now()) @map("created_at")
+  roles      String[]   @default([])
+  azureAdOid String?    @unique @map("azure_ad_oid")
+  status     UserStatus @default(active)
+
+  demands                 Demand[]           @relation("Originator")
+  managedDemands          Demand[]           @relation("DemandManager")
+  controlledDemands       Demand[]           @relation("BusinessController")
+  itProjectManagerDemands Demand[]           @relation("ItProjectManager")
+  assignedProjects        Project[]          @relation("AssignedPm")
+  roleAssignments         UserRoleAssignment[]
+  submittedStatusReports  StatusReport[]     @relation("StatusReportSubmitter")
+
+  @@map("users")
+}
+
+model UserRoleAssignment {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  role       String
+  scopeType  String   @default("area") @map("scope_type")
+  scopeId    String?  @map("scope_id")
+  areaIds    String[] @default([]) @map("area_ids")
+  countryIds String[] @default([]) @map("country_ids")
+  assignedBy String   @map("assigned_by")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, role, scopeId])
+  @@map("user_role_assignments")
+}
+
+// Feature flags — read exclusively via FlagService.get(key) (CLAUDE.md rule 3)
+model Config {
+  key         String   @id
+  value       Boolean
+  description String?
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedBy   String?  @map("updated_by")
+
+  @@map("config")
+}
+
+// Reference data — ARCH-10, NFR27
+model CostCentre {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  updatedBy String?   @map("updated_by")
+
+  demands   Demand[]
+
+  @@map("cost_centres")
+}
+
+model GlAccount {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  name        String
+  description String?
+  categories  String[]  @map("categories")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime? @updatedAt @map("updated_at")
+  updatedBy   String?   @map("updated_by")
+
+  demands                     Demand[]
+  financialPlanEntries        FinancialPlanEntry[]
+  projectFinancialPlanEntries ProjectFinancialPlanEntry[]
+
+  @@map("gl_accounts")
+}
+
+model LegalEntity {
+  id                    String    @id @default(cuid())
+  code                  String    @unique
+  name                  String
+  country               String?
+  mandatoryTimesheeting Boolean   @default(false) @map("mandatory_timesheeting")
+  isActive              Boolean   @default(true) @map("is_active")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime? @updatedAt @map("updated_at")
+  updatedBy             String?   @map("updated_by")
+
+  demands Demand[]
+
+  @@map("legal_entities")
+}
+
+model SmallProjectArea {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  updatedBy String?   @map("updated_by")
+
+  demands Demand[]
+
+  @@map("small_project_areas")
+}
+
+model Country {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  name      String
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  updatedBy String?   @map("updated_by")
+
+  demands   Demand[]
+
+  @@map("countries")
+}
+
+model Demand {
+  id                   String    @id @default(cuid())
+  publicId             Int       @unique @default(autoincrement()) @map("public_id")
+  title                String
+  description          String
+  status               String    @default("DRAFT")
+  originatorId         String    @map("originator_id")
+  costCentreId         String?   @map("cost_centre_id")
+  startDate            DateTime? @map("start_date")
+  endDate              DateTime? @map("end_date")
+  draftSavedAt         DateTime? @map("draft_saved_at")
+  // Extensibility slots (ARCH-10) — nullable from Day 1 to prevent Slice 2 migration
+  businessControllerId      String?   @map("business_controller_id")
+  bcStatus                  String?   @map("bc_status")
+  // Story 4.11 — BC action tracking
+  bcActionedAt              DateTime? @map("bc_actioned_at")
+  bcActionedBy              String?   @map("bc_actioned_by")
+  bcCommentary              String?   @map("bc_commentary")
+  // Story 2.2 — mandatory intake fields
+  legalEntityId             String?  @map("legal_entity_id")
+  areaId                    String?  @map("area_id")
+  demandManagerId           String?  @map("demand_manager_id")
+  demandOwner               String?  @map("demand_owner")
+  objective                 String?
+  necessity                 String?
+  isMandatory               Boolean  @default(false) @map("is_mandatory")
+  qualitativeValueCategory  Boolean? @map("qualitative_value_category")
+  quantitativeValueCategory Boolean? @map("quantitative_value_category")
+  reasoningForMandatory     String?  @map("reasoning_for_mandatory")
+  asisDescription           String?  @map("asis_description")
+  benefitsObjectives        String?  @map("benefits_objectives")
+  tobeDescription           String?  @map("tobe_description")
+  // Story 2.3 — AI prefill GL account
+  glAccountId               String?  @map("gl_account_id")
+  // Story 2.4 — demand classification + GxP flag
+  isSmallProject            Boolean  @default(false) @map("is_small_project")
+  isGxpRelevant             Boolean  @default(false) @map("is_gxp_relevant")
+  // Story 2.5 — inline validation and submission
+  submittedAt               DateTime? @map("submitted_at")
+  // Story 4.20 — accurate stall detection (DEF-4.6-H)
+  statusChangedAt           DateTime? @map("status_changed_at")
+  // Story 4.1 — DM assessment fields
+  dmDecision               String?   @map("dm_decision")
+  dmCommentary             String?   @map("dm_commentary")
+  eaInvolved               Boolean?  @map("ea_involved")
+  eaComment                String?   @map("ea_comment")
+  itSecurityInvolved       Boolean?  @map("it_security_involved")
+  itSecurityComment        String?   @map("it_security_comment")
+  itOpsInvolved            Boolean?  @map("it_ops_involved")
+  itOpsComment             String?   @map("it_ops_comment")
+  top10Conformity          String?   @map("top10_conformity")
+  top10ConformityComments  String?   @map("top10_conformity_comments")
+  fundingType              String?   @map("funding_type")
+  moveToSmallProject       Boolean?  @map("move_to_small_project")
+  onHoldReason             String?   @map("on_hold_reason")
+  dmActionedBy             String?   @map("dm_actioned_by")
+  dmActionedAt             DateTime? @map("dm_actioned_at")
+  // Story 4.2 — PM approval fields
+  pmCommentary             String?   @map("pm_commentary")
+  pmActionedBy             String?   @map("pm_actioned_by")
+  pmActionedAt             DateTime? @map("pm_actioned_at")
+  // Story 4.3 — SP multi-step flow sub-step
+  spStep                   String?   @map("sp_step")        // 'DM_COST_ESTIMATION' | 'DR_OFFER_REVIEW' | 'PM_DECISION' | null
+  drCommentary             String?   @map("dr_commentary")  // Originator's rework comment on cost estimate offer
+  project                  Project?
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  // Story 2.14 — demand scope
+  demandScope   String?   @map("demand_scope")   // 'GLOBAL' | 'LOCAL' | null
+  countryId     String?   @map("country_id")
+  country       Country?  @relation(fields: [countryId], references: [id])
+
+  // Story 5.1 — portfolio metadata
+  itProjectManagerId   String?  @map("it_project_manager_id")
+  projectType          String?  @map("project_type")          // "P" | "SP" | null
+  investmentApproval   String?  @map("investment_approval")   // arbitrary string; no enum enforced
+  eligibleForPpp       Boolean  @default(false) @map("eligible_for_ppp")
+  demandPriority       String?  @map("demand_priority")       // "HIGH" | "MEDIUM" | "LOW" | null
+  itProjectManager     User?    @relation("ItProjectManager", fields: [itProjectManagerId], references: [id])
+
+  originator          User              @relation("Originator", fields: [originatorId], references: [id])
+  costCentre          CostCentre?       @relation(fields: [costCentreId], references: [id])
+  legalEntity         LegalEntity?      @relation(fields: [legalEntityId], references: [id])
+  area                SmallProjectArea? @relation(fields: [areaId], references: [id])
+  demandManager       User?             @relation("DemandManager", fields: [demandManagerId], references: [id])
+  businessController  User?             @relation("BusinessController", fields: [businessControllerId], references: [id])
+  glAccount     GlAccount?        @relation(fields: [glAccountId], references: [id])
+  financialPlanEntries FinancialPlanEntry[]
+  milestones    DemandMilestone[]
+
+  @@index([originatorId], map: "idx_demands_originator")
+  @@index([status], map: "idx_demands_status")
+  @@index([glAccountId], map: "idx_demands_gl_account")
+  @@index([countryId], map: "idx_demands_country")
+  @@index([itProjectManagerId], map: "idx_demands_it_pm")
+  @@map("demands")
+}
+
+model FinancialPlanEntry {
+  id           String    @id @default(cuid())
+  demandId     String    @map("demand_id")
+  glAccountId  String    @map("gl_account_id")
+  category     String    @map("category")
+  month        Int
+  year         Int
+  valueCents   Int       @default(0) @map("value_cents")
+  isActual     Boolean   @default(false) @map("is_actual")
+  isUserSet    Boolean   @default(false) @map("is_user_set")
+  demand       Demand    @relation(fields: [demandId], references: [id], onDelete: Cascade)
+  glAccount    GlAccount @relation(fields: [glAccountId], references: [id], onDelete: Restrict)
+
+  @@unique([demandId, glAccountId, category, month, year], name: "uq_financial_plan_entry")
+  @@index([demandId])
+  @@map("financial_plan_entries")
+}
+
+model ProjectFinancialPlanEntry {
+  id          String  @id @default(cuid())
+  projectId   String  @map("project_id")
+  glAccountId String  @map("gl_account_id")
+  category    String
+  month       Int
+  year        Int
+  valueCents  Int     @default(0) @map("value_cents")
+  isActual    Boolean @default(false) @map("is_actual")
+  isUserSet   Boolean @default(false) @map("is_user_set")
+
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  glAccount GlAccount @relation(fields: [glAccountId], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, glAccountId, category, month, year], name: "uq_project_financial_plan_entry")
+  @@index([projectId])
+  @@map("project_financial_plan_entries")
+}
+
+// Story 6.2 — RAG status for status reports
+enum RagStatus {
+  GREEN
+  AMBER
+  RED
+}
+
+// Story 6.1 — All Epic 6 statuses declared here to avoid re-migrating in 6.2–6.5
+enum ProjectStatus {
+  DRAFT
+  PENDING_APPROVAL
+  IN_EXECUTION
+  ASSUMED_COMPLETED
+  PREPARE_FOR_CLOSURE
+  COMPLETED
+  CANCELLED
+}
+
+model Project {
+  id           String        @id @default(cuid())
+  demandId     String        @unique @map("demand_id")
+  status       ProjectStatus @default(DRAFT)
+  assignedPmId String?       @map("assigned_pm_id")
+  currentStage String?       @map("current_stage")
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  // Charter snapshot fields — copied one-way from demand at pmApprove
+  objective              String?
+  necessity              String?
+  gxpRelevant            Boolean? @map("gxp_relevant")
+  eaInvolved             Boolean? @map("ea_involved")
+  eaComment              String?  @map("ea_comment")
+  itSecurityInvolved     Boolean? @map("it_security_involved")
+  itSecurityComment      String?  @map("it_security_comment")
+
+  // Charter PM-filled fields
+  scope                        String?
+  depsAssumptionsRisk          String?  @map("deps_assumptions_risk")
+  appPlatformOwner             String?  @map("app_platform_owner")
+  businessPm                   String?  @map("business_pm")
+  businessSponsor              String?  @map("business_sponsor")
+  icRecharge                   Boolean? @map("ic_recharge")
+  icRechargeAlignmentConducted Boolean? @map("ic_recharge_alignment_conducted")
+  archImpact                   String?  @map("arch_impact")
+  eaAlignmentConducted         Boolean? @map("ea_alignment_conducted")
+  itSecurityAlignmentConducted Boolean? @map("it_security_alignment_conducted")
+  maintenanceL1                String?  @map("maintenance_l1")
+  maintenanceL2                String?  @map("maintenance_l2")
+  maintenanceL3                String?  @map("maintenance_l3")
+  licensesNeeded               Boolean? @map("licenses_needed")
+  licenseCostCents             Int?     @map("license_cost_cents")
+  licenseExpectedUsers         Int?     @map("license_expected_users")
+  licenseMetric                String?  @map("license_metric")
+  licenseInBudget              Boolean? @map("license_in_budget")
+
+  // Value Cases — snapshot-copied from demand at pmApprove, editable by PM in charter
+  qualitativeValue    Boolean? @map("qualitative_value")
+  quantitativeValue   Boolean? @map("quantitative_value")
+  valueCaseDescription String?  @map("value_case_description")
+
+  charterSubmittedAt           DateTime? @map("charter_submitted_at")
+
+  // Closure fields — populated when PM/DM submits closure form
+  closureWorkDelivered        Boolean?  @map("closure_work_delivered")
+  closureFinancialReconciled  Boolean?  @map("closure_financial_reconciled")
+  closureHandoverDocumentPath String?   @map("closure_handover_document_path")
+  closurePmSummaryNotes       String?   @map("closure_pm_summary_notes")
+  closureSubmittedAt          DateTime? @map("closure_submitted_at")
+
+  lastStatusReminderSentAt DateTime? @map("last_status_reminder_sent_at")
+
+  // Story 5.5 — SAP Internal Order numbers (OPEX / CAPEX)
+  opexInternalOrder  String? @map("opex_internal_order")
+  capexInternalOrder String? @map("capex_internal_order")
+
+  demand               Demand                      @relation(fields: [demandId], references: [id])
+  assignedPm           User?                       @relation("AssignedPm", fields: [assignedPmId], references: [id])
+  statusReports        StatusReport[]
+  financialPlanEntries ProjectFinancialPlanEntry[]
+  planItems            ProjectPlanItem[]
+
+  @@index([assignedPmId], map: "idx_projects_assigned_pm")
+  @@map("projects")
+}
+
+// Story 6.11 — Project Plan items (phases + milestones)
+model ProjectPlanItem {
+  id           String    @id @default(cuid())
+  projectId    String    @map("project_id")
+  name         String
+  type         String    // 'PHASE' | 'MILESTONE'
+  startDate    DateTime  @map("start_date")
+  endDate      DateTime? @map("end_date")
+  displayOrder Int       @map("display_order")
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId], map: "idx_project_plan_items_project")
+  @@map("project_plan_items")
+}
+
+model StatusReport {
+  id                String    @id @default(cuid())
+  projectId         String    @map("project_id")
+  submittedAt       DateTime  @map("submitted_at")
+  submittedById     String    @map("submitted_by_id")
+
+  overallRag        RagStatus @map("overall_rag")
+  scheduleRag       RagStatus @map("schedule_rag")
+  resourcesRag      RagStatus @map("resources_rag")
+  budgetCurrentRag  RagStatus @map("budget_current_rag")
+  budgetForecastRag RagStatus @map("budget_forecast_rag")
+  stakeholdersRag   RagStatus @map("stakeholders_rag")
+  valuePropRag      RagStatus @map("value_prop_rag")
+  providerRag       RagStatus @map("provider_rag")
+
+  overallExplanation        String? @map("overall_explanation")
+  scheduleExplanation       String? @map("schedule_explanation")
+  resourcesExplanation      String? @map("resources_explanation")
+  budgetCurrentExplanation  String? @map("budget_current_explanation")
+  budgetForecastExplanation String? @map("budget_forecast_explanation")
+  stakeholdersExplanation   String? @map("stakeholders_explanation")
+  valuePropExplanation      String? @map("value_prop_explanation")
+  providerExplanation       String? @map("provider_explanation")
+
+  keyAccomplishments String?   @map("key_accomplishments")
+  nextSteps          String?   @map("next_steps")
+  goLiveDate         DateTime? @map("go_live_date")
+
+  project     Project @relation(fields: [projectId], references: [id])
+  submittedBy User    @relation("StatusReportSubmitter", fields: [submittedById], references: [id])
+
+  @@index([projectId, submittedAt(sort: Desc)], map: "idx_status_reports_project_time")
+  @@map("status_reports")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  eventType  String   @map("event_type")
+  changedBy  String   @map("changed_by")
+  changedAt  DateTime @default(now()) @map("changed_at")
+  before     Json?
+  after      Json?
+
+  @@index([entityType, entityId], map: "idx_audit_log_entity")
+  @@index([changedAt(sort: Desc)], map: "idx_audit_log_changed_at")
+  @@index([changedBy], map: "idx_audit_log_changed_by")
+  @@map("audit_log")
+}
+
+// System configuration — configurable business rules (SP threshold, dates, GxP defaults)
+// Read exclusively via SystemConfigService.getAll() — never query directly (CLAUDE.md rule 3 principle)
+model SystemConfig {
+  key         String   @id
+  value       String   // JSON-serialized value (number → "50000000", date → ISO string, null → "null")
+  description String?
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedBy   String?  @map("updated_by")
+
+  @@map("system_config")
+}
+
+// GxP milestone records created at demand submission when isGxpRelevant = true
+model DemandMilestone {
+  id              String   @id @default(cuid())
+  demandId        String   @map("demand_id")
+  milestoneType   String   @map("milestone_type") // 'IT_VALIDATION' | 'DOCUMENTATION'
+  durationDays    Int      @map("duration_days")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  demand          Demand   @relation(fields: [demandId], references: [id])
+
+  @@unique([demandId, milestoneType])
+  @@index([demandId])
+  @@map("demand_milestones")
+}

@@ -1,0 +1,50 @@
+{
+  "shell": {
+    "appName": "Helix",
+    "langEn": "EN",
+    "langDe": "DE",
+    "skipToMain": "Zum Hauptinhalt springen",
+    "toggleNav": "Menü ein-/ausblenden",
+    "logout": "Abmelden"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "demands": "Meine Anforderungen",
+    "actionQueue": "Aktionswarteschlange",
+    "newDemand": "Neue Anforderung",
+    "admin": "Administration",
+    "adminUsers": "Benutzer",
+    "routingHealth": "Routing-Status",
+    "costCentres": "Kostenstellen",
+    "glAccounts": "Sachkonten",
+    "legalEntities": "Rechtseinheiten",
+    "areas": "Bereiche",
+    "countries": "Länder",
+    "systemConfig": "Systemkonfiguration",
+    "featureFlags": "Feature-Flags",
+    "auditLog": "Audit-Protokoll",
+    "sapIntegration": "SAP-Integration",
+    "portfolio": "Portfolio",
+    "projects": "Meine Projekte"
+  },
+  "pages": {
+    "dashboard": "Dashboard",
+    "demands": "Anforderungen",
+    "newDemand": "Neue Anforderung",
+    "admin": "Administration"
+  },
+  "auth": {
+    "devLoginTitle": "Helix Entwickler-Anmeldung",
+    "devLoginWarning": "Nur im Entwicklungsmodus — nicht in der Produktion verfügbar",
+    "loginButton": "Anmelden als {{name}}",
+    "colName": "Name",
+    "colEmail": "E-Mail",
+    "colRoles": "Rollen",
+    "loadingUsers": "Entwicklerbenutzer werden geladen...",
+    "loginError": "Anmeldung fehlgeschlagen. Prüfen Sie ob die API läuft.",
+    "msalLoginButton": "Mit STADA Azure AD anmelden",
+    "msalLoginHint": "Verwenden Sie Ihr STADA-Unternehmenskonto",
+    "notProvisionedTitle": "Zugriff verweigert",
+    "notProvisioned": "Ihr Konto ist nicht in Helix eingerichtet. Wenden Sie sich an Ihren Systemadministrator."
+  }
+}

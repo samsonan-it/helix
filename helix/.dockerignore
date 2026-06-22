@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.local
+.git
+.gitignore
+**/coverage
+**/*.log
+**/*.tsbuildinfo
+# Exclude pre-compiled JS/d.ts artefacts committed inside packages/types/src
+# Rollup prefers .js over .ts when both exist; the CJS output breaks ESM bundling
+packages/types/src/**/*.js
+packages/types/src/**/*.d.ts

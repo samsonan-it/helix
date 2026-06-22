@@ -1,0 +1,50 @@
+{
+  "shell": {
+    "appName": "Helix",
+    "langEn": "EN",
+    "langDe": "DE",
+    "skipToMain": "Skip to main content",
+    "toggleNav": "Toggle navigation",
+    "logout": "Log out"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "demands": "My Demands",
+    "actionQueue": "Action Queue",
+    "newDemand": "New Demand",
+    "admin": "Admin",
+    "adminUsers": "Users",
+    "routingHealth": "Routing Health",
+    "costCentres": "Cost Centres",
+    "glAccounts": "GL Accounts",
+    "legalEntities": "Legal Entities",
+    "areas": "Areas",
+    "countries": "Countries",
+    "systemConfig": "System Configuration",
+    "featureFlags": "Feature Flags",
+    "auditLog": "Audit Log",
+    "sapIntegration": "SAP Integration",
+    "portfolio": "Portfolio",
+    "projects": "My Projects"
+  },
+  "pages": {
+    "dashboard": "Dashboard",
+    "demands": "Demands",
+    "newDemand": "New Demand",
+    "admin": "Admin"
+  },
+  "auth": {
+    "devLoginTitle": "Helix Dev Login",
+    "devLoginWarning": "Development mode only — not available in production",
+    "loginButton": "Login as {{name}}",
+    "colName": "Name",
+    "colEmail": "Email",
+    "colRoles": "Roles",
+    "loadingUsers": "Loading dev users...",
+    "loginError": "Login failed. Check the API is running.",
+    "msalLoginButton": "Sign in with STADA Azure AD",
+    "msalLoginHint": "Use your STADA corporate account",
+    "notProvisionedTitle": "Access Denied",
+    "notProvisioned": "Your account is not provisioned in Helix. Contact your system administrator."
+  }
+}
