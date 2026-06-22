@@ -1,0 +1,89 @@
+*:focus-visible {
+  outline: 2px solid #0065bd; /* STADA blue focus ring (design-system §7, §10) */
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translateY(-100%);
+  background: #0065bd; /* STADA blue */
+  color: white;
+  padding: 8px 16px;
+  z-index: 9999;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.rote-ecke {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 80px 80px 0;
+  border-color: transparent #CC0033 transparent transparent;
+  pointer-events: none;
+}
+
+/* Light "airy" shell — white nav, dark text, red active accent (design-system §4, §10). */
+.helix-sidebar {
+  background-color: #ffffff;
+  border-right: 1px solid #e9ecef;
+}
+
+.helix-sidebar .mantine-NavLink-root {
+  color: #475569;
+  border-radius: 0;
+}
+
+.helix-sidebar .mantine-NavLink-root:hover:not([data-active]) {
+  background-color: #f1f3f5;
+  color: #111827;
+}
+
+.helix-sidebar .mantine-NavLink-root[data-active] {
+  background-color: #fff0f3;
+  color: #cc0033;
+  box-shadow: inset 3px 0 0 #cc0033;
+}
+
+.helix-sidebar .mantine-NavLink-section {
+  color: inherit;
+}
+
+/* Shared list-table card treatment — header tint (design-system §5). */
+.list-table-card thead tr th {
+  background-color: var(--mantine-color-gray-0);
+}
+
+/* List tables: extra left padding on first column for visual breathing room. */
+.list-table-card th:first-child,
+.list-table-card td:first-child {
+  padding-left: var(--mantine-spacing-md);
+}
+
+/* List tables: sort icon sits immediately after the column label.
+   mantine-datatable renders a Mantine Group with justify="space-between" (inline
+   style → !important required) and an inner group with w="100%" (same). */
+.list-table-card .mantine-datatable-header-cell-sortable-group {
+  --group-justify: flex-start !important;
+}
+.list-table-card .mantine-datatable-header-cell-sortable-group > :first-child {
+  width: auto !important;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+/* Tabs: bold active tab label; extra bottom padding on all tabs. */
+.mantine-Tabs-tab[data-active] {
+  font-weight: 700;
+}
+.mantine-Tabs-tab {
+  padding-bottom: 12px;
+}
